@@ -193,6 +193,12 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   });
 });
 
+// ───────────────────── Health Check (sem autenticação) ─────────────────────
+// Deve ficar ANTES do authMiddleware para o ALB receber 200 sem token
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // ───────────────────── Middleware de Autenticação ─────────────────────
 // Todas as rotas /api/* abaixo desta linha requerem autenticação
 app.use('/api', authMiddleware);
@@ -238,12 +244,6 @@ app.use('/api/config', configRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/nodes', nodesRoutes);
-
-// Health check geral no /api/health
-app.get('/api/health', (req, res, next) => {
-  req.url = '/health';
-  nodesRoutes(req, res, next);
-});
 
 // Servir arquivos estáticos do Frontend (HTML, CSS, JS)
 app.use(express.static(config.STATIC_DIR, {

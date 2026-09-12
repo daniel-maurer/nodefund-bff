@@ -75,7 +75,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Diagnóstico OIDC Token
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
@@ -88,7 +88,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
           role-skip-session-tagging: true
-          
+
+      # ── Passo 1: Infra base (sem ECSService) ─────────────────────────────────
       - name: 1. Deploy da Infraestrutura (CloudFormation)
         run: |
           aws cloudformation deploy \
@@ -97,31 +98,88 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
+      # ── Passo 2: Recuperar outputs da stack ───────────────────────────────────
       - name: 2. Recuperar Parâmetros da Infraestrutura
         id: get-infra-params
         run: |
-          ECR_URI=$(aws cloudformation describe-stacks --stack-name nodefund-bff --query "Stacks[0].Outputs[?OutputKey=='ECRRepositoryUri'].OutputValue" --output text)
-          CLUSTER=$(aws cloudformation describe-stacks --stack-name nodefund-bff --query "Stacks[0].Outputs[?OutputKey=='ECSClusterName'].OutputValue" --output text)
-          SERVICE=$(aws cloudformation describe-stacks --stack-name nodefund-bff --query "Stacks[0].Outputs[?OutputKey=='ECSServiceName'].OutputValue" --output text)
-          
-          echo "ECR_URI=$ECR_URI" >> $GITHUB_ENV
-          echo "CLUSTER=$CLUSTER" >> $GITHUB_ENV
-          echo "SERVICE=$SERVICE" >> $GITHUB_ENV
+          STACK_OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name nodefund-bff \
+            --query "Stacks[0].Outputs" \
+            --output json)
 
+          get_output() {
+            echo "$STACK_OUTPUTS" | jq -r ".[] | select(.OutputKey==\"$1\") | .OutputValue"
+          }
+
+          ECR_URI=$(get_output ECRRepositoryUri)
+          CLUSTER=$(get_output ECSClusterName)
+          SERVICE=$(get_output ECSServiceName)
+          TASK_FAMILY=$(get_output ECSTaskDefinitionFamily)
+          TG_ARN=$(get_output ALBTargetGroupArn)
+          SUBNET1=$(get_output PublicSubnet1Id)
+          SUBNET2=$(get_output PublicSubnet2Id)
+          SG_ECS=$(get_output SecurityGroupECSId)
+
+          echo "ECR_URI=$ECR_URI"         >> $GITHUB_ENV
+          echo "CLUSTER=$CLUSTER"         >> $GITHUB_ENV
+          echo "SERVICE=$SERVICE"         >> $GITHUB_ENV
+          echo "TASK_FAMILY=$TASK_FAMILY" >> $GITHUB_ENV
+          echo "TG_ARN=$TG_ARN"           >> $GITHUB_ENV
+          echo "SUBNET1=$SUBNET1"         >> $GITHUB_ENV
+          echo "SUBNET2=$SUBNET2"         >> $GITHUB_ENV
+          echo "SG_ECS=$SG_ECS"           >> $GITHUB_ENV
+
+      # ── Passo 3: Build e push da imagem ──────────────────────────────────────
       - name: 3. Autenticar no Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
-        
+
       - name: 4. Build e Push da Imagem Docker
         run: |
           IMAGE_TAG=${{ github.sha }}
           docker build -t ${{ env.ECR_URI }}:$IMAGE_TAG .
           docker push ${{ env.ECR_URI }}:$IMAGE_TAG
-          docker tag ${{ env.ECR_URI }}:$IMAGE_TAG ${{ env.ECR_URI }}:latest
+          docker tag  ${{ env.ECR_URI }}:$IMAGE_TAG ${{ env.ECR_URI }}:latest
           docker push ${{ env.ECR_URI }}:latest
-          
-      - name: 5. Atualizar Serviço ECS Fargate
+
+      # ── Passo 4: Criar ou atualizar o ECS Service ────────────────────────────
+      # A imagem já existe no ECR neste ponto, portanto o pull sempre funciona.
+      - name: 5. Criar ou Atualizar Serviço ECS Fargate
         run: |
-          aws ecs update-service \
+          TASK_DEF_ARN=$(aws ecs describe-task-definition \
+            --task-definition ${{ env.TASK_FAMILY }} \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+
+          # Verifica se o serviço já existe e está ACTIVE
+          SERVICE_STATUS=$(aws ecs describe-services \
             --cluster ${{ env.CLUSTER }} \
-            --service ${{ env.SERVICE }} \
-            --force-new-deployment
+            --services ${{ env.SERVICE }} \
+            --query "services[0].status" \
+            --output text 2>/dev/null || echo "MISSING")
+
+          if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+            echo "Serviço existente — atualizando..."
+            aws ecs update-service \
+              --cluster ${{ env.CLUSTER }} \
+              --service ${{ env.SERVICE }} \
+              --task-definition $TASK_DEF_ARN \
+              --force-new-deployment
+          else
+            echo "Serviço não existe — criando..."
+            aws ecs create-service \
+              --cluster ${{ env.CLUSTER }} \
+              --service-name ${{ env.SERVICE }} \
+              --task-definition $TASK_DEF_ARN \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[${{ env.SUBNET1 }},${{ env.SUBNET2 }}],securityGroups=[${{ env.SG_ECS }}],assignPublicIp=ENABLED}" \
+              --load-balancers "targetGroupArn=${{ env.TG_ARN }},containerName=bff,containerPort=8000"
+          fi
+
+      # ── Passo 5: Aguardar serviço estabilizar ────────────────────────────────
+      - name: 6. Aguardar Serviço ECS Estabilizar
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ env.CLUSTER }} \
+            --services ${{ env.SERVICE }}
+          echo "✅ Deploy concluído com sucesso!"

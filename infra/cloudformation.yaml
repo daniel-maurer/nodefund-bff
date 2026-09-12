@@ -327,27 +327,8 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ecs
 
-  ECSService:
-    Type: AWS::ECS::Service
-    DependsOn: ALBListener
-    Properties:
-      ServiceName: !Sub '${AppName}-service'
-      Cluster: !Ref ECSCluster
-      TaskDefinition: !Ref ECSTaskDefinition
-      DesiredCount: 1
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
-          Subnets:
-            - !Ref PublicSubnet1
-            - !Ref PublicSubnet2
-          SecurityGroups:
-            - !Ref SecurityGroupECS
-      LoadBalancers:
-        - ContainerName: bff
-          ContainerPort: 8000
-          TargetGroupArn: !Ref ALBTargetGroup
+  # ECSService é criado/atualizado pelo pipeline CI/CD (ci-cd.yml)
+  # após o push da imagem Docker para o ECR, evitando CannotPullContainerError.
 
 Outputs:
   CognitoUserPoolId:
@@ -363,7 +344,17 @@ Outputs:
   ECSClusterName:
     Value: !Ref ECSCluster
   ECSServiceName:
-    Value: !GetAtt ECSService.Name
+    Value: !Sub '${AppName}-service'
+  ECSTaskDefinitionFamily:
+    Value: !Sub '${AppName}-task'
+  ALBTargetGroupArn:
+    Value: !Ref ALBTargetGroup
+  PublicSubnet1Id:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2Id:
+    Value: !Ref PublicSubnet2
+  SecurityGroupECSId:
+    Value: !Ref SecurityGroupECS
   VpcId:
     Value: !Ref VPC
   S3CvmCacheBucket:
