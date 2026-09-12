@@ -64,8 +64,8 @@ test('API GET /api/data/status - inventário de dados locais', async () => {
   const res = await fetch(`${BASE_URL}/api/data/status`);
   assert.strictEqual(res.status, 200);
   const data = await res.json();
-  assert.ok(Array.isArray(data.funds_status));
-  assert.ok(Array.isArray(data.b3_status));
+  assert.ok(Array.isArray(data.funds));
+  assert.ok(Array.isArray(data.b3_assets));
 });
 
 test('API GET /api/nodes - topologia da Distributed Node Architecture', async () => {
