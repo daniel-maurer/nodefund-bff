@@ -4,7 +4,6 @@
  * migrados dos arquivos JSON legados.
  */
 
-require('dotenv').config();
 const { DynamoDBClient, CreateTableCommand, ListTablesCommand } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
 const fs = require('fs');
@@ -121,8 +120,6 @@ async function seedData() {
     }));
   }
 
-  // Not migrating quotes and historical data to keep the script fast.
-  // The user can run "update data" to fetch quotes into DynamoDB.
   console.log('[Setup] Seed completo!');
 }
 
