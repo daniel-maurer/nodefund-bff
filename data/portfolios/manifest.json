@@ -1,0 +1,15 @@
+{
+  "active_portfolio_id": "previdencia",
+  "portfolios": [
+    {
+      "id": "previdencia",
+      "name": "Carteira Previdência",
+      "file": "previdencia.json"
+    },
+    {
+      "id": "b3_multimercado",
+      "name": "Ações & FIIs B3",
+      "file": "b3_multimercado.json"
+    }
+  ]
+}

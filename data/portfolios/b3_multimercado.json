@@ -1,0 +1,62 @@
+{
+  "id": "b3_multimercado",
+  "name": "Ações & FIIs B3",
+  "updated_at": "2026-09-11T09:50:00.000000",
+  "funds": [
+    {
+      "id": "b3_bova11",
+      "type": "b3",
+      "name": "iShares Ibovespa Fundo de Índice (BOVA11)",
+      "cnpj": "",
+      "code": "BOVA11",
+      "target_pct": 30,
+      "min_investment": 150,
+      "color": "#2E7D5B",
+      "color_aux": "#E7F2EC"
+    },
+    {
+      "id": "b3_ivvb11",
+      "type": "b3",
+      "name": "iShares S&P 500 Fundo de Índice (IVVB11)",
+      "cnpj": "",
+      "code": "IVVB11",
+      "target_pct": 30,
+      "min_investment": 350,
+      "color": "#3B6978",
+      "color_aux": "#EAF1F4"
+    },
+    {
+      "id": "b3_hglg11",
+      "type": "b3",
+      "name": "CSHG Logística FII (HGLG11)",
+      "cnpj": "",
+      "code": "HGLG11",
+      "target_pct": 20,
+      "min_investment": 150,
+      "color": "#B86B43",
+      "color_aux": "#FAF0EA"
+    },
+    {
+      "id": "b3_petr4",
+      "type": "b3",
+      "name": "Petrobras PN (PETR4)",
+      "cnpj": "",
+      "code": "PETR4",
+      "target_pct": 10,
+      "min_investment": 50,
+      "color": "#5D506E",
+      "color_aux": "#EFECEF"
+    },
+    {
+      "id": "b3_vale3",
+      "type": "b3",
+      "name": "Vale ON (VALE3)",
+      "cnpj": "",
+      "code": "VALE3",
+      "target_pct": 10,
+      "min_investment": 70,
+      "color": "#3D6F6B",
+      "color_aux": "#EBF2F1"
+    }
+  ]
+}

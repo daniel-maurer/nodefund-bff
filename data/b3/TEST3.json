@@ -1,0 +1,21 @@
+{
+  "ticker": "TEST3",
+  "name": "Ativo Teste B3",
+  "type": "b3",
+  "updated_at": "2026-09-11T19:13:17.732982",
+  "total_records": 2,
+  "start_date": "2024-05-02",
+  "end_date": "2024-05-03",
+  "quotes": [
+    {
+      "date": "2024-05-02",
+      "quota": 30.0,
+      "close": 30.0
+    },
+    {
+      "date": "2024-05-03",
+      "quota": 31.5,
+      "close": 31.5
+    }
+  ]
+}

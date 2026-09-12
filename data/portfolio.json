@@ -1,0 +1,62 @@
+{
+  "id": "previdencia",
+  "name": "Carteira Previdência",
+  "updated_at": "2026-09-11T08:07:31.490703",
+  "funds": [
+    {
+      "id": "giant_prev",
+      "type": "fund",
+      "name": "GIANT PREV FIFE FIF MULTIMERCADO RL",
+      "cnpj": "32.849.296/0001-06",
+      "code": "32.849.296/0001-06",
+      "target_pct": 10,
+      "min_investment": 100,
+      "color": "#3B6978",
+      "color_aux": "#EAF1F4"
+    },
+    {
+      "id": "real_investor_70",
+      "type": "fund",
+      "name": "REAL INVESTOR 70 PREVIDENCIA FIF MULTIMERCADO",
+      "cnpj": "33.588.607/0001-93",
+      "code": "33.588.607/0001-93",
+      "target_pct": 20,
+      "min_investment": 500,
+      "color": "#2E7D5B",
+      "color_aux": "#E7F2EC"
+    },
+    {
+      "id": "tyton_credito",
+      "type": "fund",
+      "name": "TYTON CRÉDITO PREVIDÊNCIA FIM",
+      "cnpj": "53.847.333/0001-17",
+      "code": "53.847.333/0001-17",
+      "target_pct": 10,
+      "min_investment": 100,
+      "color": "#B86B43",
+      "color_aux": "#FAF0EA"
+    },
+    {
+      "id": "trigono_70",
+      "type": "fund",
+      "name": "TRIGONO 70 PREVIDÊNCIA FIF MULTIMERCADO",
+      "cnpj": "33.600.869/0001-26",
+      "code": "33.600.869/0001-26",
+      "target_pct": 20,
+      "min_investment": 500,
+      "color": "#7D6B58",
+      "color_aux": "#F5F1EE"
+    },
+    {
+      "id": "arca_grao",
+      "type": "fund",
+      "name": "ARCA GRÃO PREVIDÊNCIA MASTER CLASSE FIM RL",
+      "cnpj": "42.847.903/0001-52",
+      "code": "42.847.903/0001-52",
+      "target_pct": 40,
+      "min_investment": 100,
+      "color": "#A68032",
+      "color_aux": "#FAF5EA"
+    }
+  ]
+}

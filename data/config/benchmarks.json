@@ -1,0 +1,82 @@
+[
+  {
+    "id": "cdi",
+    "name": "CDI",
+    "type": "bcb_sgs",
+    "code": "12",
+    "enabled": true,
+    "color": "#B86B43",
+    "unit": "daily_rate",
+    "source": "Banco Central (SGS 12)"
+  },
+  {
+    "id": "ipca",
+    "name": "IPCA",
+    "type": "bcb_sgs",
+    "code": "433",
+    "enabled": true,
+    "color": "#3B6978",
+    "unit": "monthly_rate",
+    "source": "Banco Central (SGS 433)"
+  },
+  {
+    "id": "poupanca",
+    "name": "Poupança",
+    "type": "bcb_sgs",
+    "code": "196",
+    "enabled": true,
+    "color": "#8E95A5",
+    "unit": "monthly_rate",
+    "source": "Banco Central (SGS 196)"
+  },
+  {
+    "id": "ibov",
+    "name": "IBOVESPA",
+    "type": "yahoo",
+    "code": "^BVSP",
+    "enabled": true,
+    "color": "#2E7D5B",
+    "unit": "price",
+    "source": "Yahoo Finance (^BVSP)"
+  },
+  {
+    "id": "ifix",
+    "name": "IFIX",
+    "type": "yahoo",
+    "code": "XFIX11.SA",
+    "enabled": true,
+    "color": "#A68032",
+    "unit": "price",
+    "source": "Índice FIIs (XFIX11 via Yahoo)"
+  },
+  {
+    "id": "sp500",
+    "name": "S&P 500 (BRL)",
+    "type": "composite_usd",
+    "code": "^GSPC",
+    "enabled": true,
+    "color": "#5D506E",
+    "unit": "price_usd_brl",
+    "source": "S&P 500 em Reais (^GSPC + USD)"
+  },
+  {
+    "id": "btc",
+    "name": "Bitcoin (BRL)",
+    "type": "composite_usd",
+    "code": "BTC-USD",
+    "enabled": true,
+    "color": "#C88D48",
+    "unit": "price_usd_brl",
+    "source": "Bitcoin em Reais (BTC-USD + USD)"
+  },
+  {
+    "id": "usd",
+    "name": "Dólar Comercial",
+    "type": "yahoo",
+    "code": "USDBRL=X",
+    "enabled": true,
+    "color": "#718096",
+    "unit": "currency",
+    "source": "Yahoo Finance (USDBRL=X)"
+  }
+]

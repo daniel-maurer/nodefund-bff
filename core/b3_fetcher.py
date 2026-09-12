@@ -1,0 +1,139 @@
+"""
+Módulo de coleta de cotações históricas diárias de ativos da B3 (Ações, FIIs, ETFs, BDRs).
+Utiliza a API pública do Yahoo Finance com sufixo '.SA'.
+Suporta atualização incremental e persistência em data/b3/<ticker>.json e .csv.
+"""
+
+import time
+import requests
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Callable
+from .storage import clean_ticker, save_b3_data, load_b3_data
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*"
+}
+
+def fetch_b3_quotes_from_yahoo(ticker: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    """
+    Busca o histórico diário de fechamento de um ativo da B3 no Yahoo Finance.
+    Adiciona automaticamente o sufixo '.SA'.
+    """
+    raw_ticker = clean_ticker(ticker)
+    if not raw_ticker:
+        return []
+
+    yahoo_symbol = f"{raw_ticker}.SA"
+
+    try:
+        dt_start = datetime.strptime(start_date, "%Y-%m-%d")
+        dt_end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+        p1 = int(dt_start.timestamp())
+        p2 = int(dt_end.timestamp())
+    except Exception:
+        p1 = 1714521600  # 2024-05-01
+        p2 = int(time.time())
+
+    encoded_sym = yahoo_symbol.replace("^", "%5E").replace("=", "%3D")
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded_sym}?period1={p1}&period2={p2}&interval=1d"
+
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=25)
+        if response.status_code == 200:
+            res_json = response.json()
+            chart_res = res_json.get("chart", {}).get("result", [])
+            if not chart_res:
+                return []
+
+            timestamps = chart_res[0].get("timestamp", [])
+            quote_data = chart_res[0].get("indicators", {}).get("quote", [{}])[0]
+            closes = quote_data.get("close", [])
+            adj_closes = chart_res[0].get("indicators", {}).get("adjclose", [{}])[0].get("adjclose", [])
+
+            results = []
+            for idx, (ts, close) in enumerate(zip(timestamps, closes)):
+                val = close
+                # Preferir valor ajustado por dividendos se disponível
+                if adj_closes and idx < len(adj_closes) and adj_closes[idx] is not None:
+                    val = adj_closes[idx]
+
+                if val is not None:
+                    dt_str = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d")
+                    if start_date <= dt_str <= end_date:
+                        results.append({
+                            "date": dt_str,
+                            "quota": float(val),  # Preço da ação/cota
+                            "close": float(close) if close is not None else float(val)
+                        })
+            return results
+        else:
+            print(f"Yahoo retornou HTTP {response.status_code} para {yahoo_symbol}")
+            return []
+    except Exception as e:
+        print(f"Erro ao buscar {yahoo_symbol} no Yahoo Finance: {e}")
+        return []
+
+def update_b3_assets_data(
+    assets: List[Dict[str, Any]],
+    start_date: str,
+    end_date: str,
+    progress_callback: Optional[Callable[[str], None]] = None
+) -> Dict[str, Any]:
+    """
+    Atualiza dados de uma lista de ativos da B3 para o intervalo solicitado.
+    """
+    summary = []
+    b3_assets = [a for a in assets if a.get("type") == "b3" or clean_ticker(a.get("code", ""))]
+
+    for idx, asset in enumerate(b3_assets):
+        ticker = clean_ticker(asset.get("code", "") or asset.get("id", ""))
+        name = asset.get("name", ticker)
+        msg = f"Buscando cotações B3 para {ticker} ({idx + 1}/{len(b3_assets)})..."
+        if progress_callback:
+            progress_callback(msg)
+        else:
+            print(msg)
+
+        quotes = fetch_b3_quotes_from_yahoo(ticker, start_date, end_date)
+        res = save_b3_data(ticker, name, quotes)
+        summary.append(res)
+
+    return {
+        "status": "success",
+        "assets_updated": summary
+    }
+
+def update_b3_incremental(
+    assets: List[Dict[str, Any]],
+    default_start: str = "2024-05-01",
+    target_end: Optional[str] = None,
+    progress_callback: Optional[Callable[[str], None]] = None
+) -> Dict[str, Any]:
+    """
+    Atualização incremental para ativos da B3:
+    Detecta a data mais antiga registrada entre os ativos ou busca a partir da última data.
+    """
+    if not target_end:
+        target_end = datetime.now().strftime("%Y-%m-%d")
+
+    b3_assets = [a for a in assets if a.get("type") == "b3" or clean_ticker(a.get("code", ""))]
+    if not b3_assets:
+        return {"status": "success", "assets_updated": []}
+
+    min_existing_date = None
+    all_have_data = True
+
+    for a in b3_assets:
+        ticker = clean_ticker(a.get("code", "") or a.get("id", ""))
+        quotes = load_b3_data(ticker)
+        if not quotes:
+            all_have_data = False
+            break
+        last_date = quotes[-1]["date"]
+        if min_existing_date is None or last_date < min_existing_date:
+            min_existing_date = last_date
+
+    fetch_start = default_start if (not all_have_data or not min_existing_date) else min_existing_date
+
+    return update_b3_assets_data(b3_assets, fetch_start, target_end, progress_callback)

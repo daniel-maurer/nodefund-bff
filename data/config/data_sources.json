@@ -1,0 +1,51 @@
+{
+  "cvm": {
+    "id": "cvm",
+    "name": "CVM - Informe Diário de Fundos",
+    "description": "Portal de Dados Abertos da CVM com histórico oficial de cotas diárias de fundos 555.",
+    "url_template": "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_{YYYYMM}.zip",
+    "encoding": "latin1",
+    "delimiter": ";",
+    "headers": {
+      "User-Agent": "Mozilla/5.0"
+    },
+    "columns": {
+      "cnpj": "CNPJ_FUNDO",
+      "date": "DT_COMPTC",
+      "quota": "VL_QUOTA",
+      "net_worth": "VL_PATRIM_LIQ",
+      "inflow": "CAPTC_DIA",
+      "outflow": "RESG_DIA"
+    }
+  },
+  "b3": {
+    "id": "b3",
+    "name": "B3 (Ações, FIIs, ETFs) via Yahoo Finance",
+    "description": "API do Yahoo Finance para cotações diárias de ativos negociados na B3.",
+    "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{TICKER}.SA?period1={START_TS}&period2={END_TS}&interval=1d",
+    "ticker_suffix": ".SA",
+    "headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  },
+  "bcb_sgs": {
+    "id": "bcb_sgs",
+    "name": "Banco Central do Brasil - Séries Temporais (SGS)",
+    "description": "API REST pública do Banco Central para indicadores econômicos oficiais (CDI, IPCA, Poupança, etc.).",
+    "url_template": "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{SERIE}/dados?formato=json&dataInicial={DATA_INI}&dataFinal={DATA_FIM}",
+    "date_format_in": "%d/%m/%Y",
+    "date_format_out": "%Y-%m-%d",
+    "headers": {
+      "User-Agent": "Mozilla/5.0"
+    }
+  },
+  "yahoo_benchmarks": {
+    "id": "yahoo_benchmarks",
+    "name": "Yahoo Finance - Índices, Câmbio & Criptoativos",
+    "description": "Endpoints para coleta de IBOVESPA, S&P 500, Dólar USD/BRL e Criptoativos (Bitcoin).",
+    "url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?period1={START_TS}&period2={END_TS}&interval=1d",
+    "headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  }
+}
