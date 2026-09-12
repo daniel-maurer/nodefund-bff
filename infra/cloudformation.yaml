@@ -329,6 +329,7 @@ Resources:
 
   ECSService:
     Type: AWS::ECS::Service
+    DependsOn: ALBListener
     Properties:
       ServiceName: !Sub '${AppName}-service'
       Cluster: !Ref ECSCluster
