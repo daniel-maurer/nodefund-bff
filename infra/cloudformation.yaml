@@ -214,6 +214,9 @@ Resources:
       HealthCheckPath: /api/health
       HealthCheckIntervalSeconds: 30
       HealthyThresholdCount: 2
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: '30'
 
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener

@@ -98,7 +98,6 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
-      # ── Passo 2: Recuperar outputs da stack ───────────────────────────────────
       - name: 2. Recuperar Parâmetros da Infraestrutura
         id: get-infra-params
         run: |
@@ -119,6 +118,23 @@ jobs:
           SUBNET1=$(get_output PublicSubnet1Id)
           SUBNET2=$(get_output PublicSubnet2Id)
           SG_ECS=$(get_output SecurityGroupECSId)
+
+          # Validação: falha rápida se qualquer output estiver vazio
+          validate() {
+            if [ -z "$2" ] || [ "$2" = "null" ]; then
+              echo "Erro: output '$1' não encontrado na stack nodefund-bff"
+              exit 1
+            fi
+            echo "$1=$2"
+          }
+          validate ECRRepositoryUri    "$ECR_URI"
+          validate ECSClusterName      "$CLUSTER"
+          validate ECSServiceName      "$SERVICE"
+          validate ECSTaskDefinitionFamily "$TASK_FAMILY"
+          validate ALBTargetGroupArn   "$TG_ARN"
+          validate PublicSubnet1Id     "$SUBNET1"
+          validate PublicSubnet2Id     "$SUBNET2"
+          validate SecurityGroupECSId  "$SG_ECS"
 
           echo "ECR_URI=$ECR_URI"         >> $GITHUB_ENV
           echo "CLUSTER=$CLUSTER"         >> $GITHUB_ENV
