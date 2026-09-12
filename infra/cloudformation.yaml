@@ -10,6 +10,16 @@ Parameters:
     Type: String
     Default: 'nodefund'
     Description: 'Nome da aplicação'
+  DeployALB:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: 'Controla a criação do Application Load Balancer (desative para economizar custos fora de produção)'
+
+Conditions:
+  ShouldDeployALB: !Equals [!Ref DeployALB, 'true']
 
 Resources:
   # ===========================================================================
@@ -17,6 +27,7 @@ Resources:
   # ===========================================================================
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
     Properties:
       UserPoolName: !Sub '${AppName}-users'
       AutoVerifiedAttributes:
@@ -44,6 +55,7 @@ Resources:
 
   CognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
+    DeletionPolicy: Retain
     Properties:
       ClientName: !Sub '${AppName}-spa-client'
       UserPoolId: !Ref CognitoUserPool
@@ -58,6 +70,7 @@ Resources:
   # ===========================================================================
   DynamoDBTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
     Properties:
       TableName: !Ref AppName
       BillingMode: PAY_PER_REQUEST
@@ -79,6 +92,7 @@ Resources:
   # ===========================================================================
   S3CvmCacheBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
       BucketName: !Sub '${AppName}-cvm-cache-${AWS::AccountId}-${AWS::Region}'
       LifecycleConfiguration:
@@ -194,6 +208,7 @@ Resources:
   # ===========================================================================
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: ShouldDeployALB
     Properties:
       Name: !Sub '${AppName}-alb'
       Scheme: internet-facing
@@ -205,6 +220,7 @@ Resources:
 
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: ShouldDeployALB
     Properties:
       Name: !Sub '${AppName}-tg'
       VpcId: !Ref VPC
@@ -220,6 +236,7 @@ Resources:
 
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: ShouldDeployALB
     Properties:
       LoadBalancerArn: !Ref ALB
       Port: 80
@@ -341,6 +358,7 @@ Outputs:
   DynamoDBTableName:
     Value: !Ref DynamoDBTable
   ALBDnsName:
+    Condition: ShouldDeployALB
     Value: !GetAtt ALB.DNSName
   ECRRepositoryUri:
     Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}'
@@ -351,6 +369,7 @@ Outputs:
   ECSTaskDefinitionFamily:
     Value: !Sub '${AppName}-task'
   ALBTargetGroupArn:
+    Condition: ShouldDeployALB
     Value: !Ref ALBTargetGroup
   PublicSubnet1Id:
     Value: !Ref PublicSubnet1

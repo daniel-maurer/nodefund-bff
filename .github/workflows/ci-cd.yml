@@ -1,9 +1,9 @@
 name: BFF — Testes & Deploy
 on:
   pull_request:
-    branches: [master, main]
+    branches: [master, main, stg, staging]
   push:
-    branches: [master, main]
+    branches: [master, main, stg, staging]
 
 jobs:
   test:
@@ -66,8 +66,10 @@ jobs:
           STORAGE_BACKEND: dynamodb
 
   deploy:
-    name: Deploy Infra AWS e Aplicação
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    name: Deploy Infra AWS e Aplicação (Produção)
+    # Deploy roda exclusivamente quando houver push/merge na branch main ou master.
+    # Em branches de desenvolvimento (como stg) ou em pull requests, apenas o job 'test' é executado.
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
     needs: test
     runs-on: ubuntu-latest
     permissions:
