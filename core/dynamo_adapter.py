@@ -15,9 +15,23 @@ import os
 import re
 import json
 from datetime import datetime
+from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Key
+
+def _convert_decimals(obj):
+    if isinstance(obj, list):
+        return [_convert_decimals(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: _convert_decimals(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    return obj
+
+def _to_dynamo_item(obj):
+    return json.loads(json.dumps(obj), parse_float=Decimal)
+
 
 # ─────────────────── Configuração do Cliente ───────────────────
 
@@ -33,6 +47,9 @@ if ENDPOINT_URL:
 
 _dynamodb = boto3.resource('dynamodb', **_dynamodb_kwargs)
 _table = _dynamodb.Table(TABLE_NAME)
+
+def _put_item(item):
+    _table.put_item(Item=_to_dynamo_item(item))
 
 
 # ─────────────────── Utilidades ───────────────────
@@ -109,7 +126,7 @@ def save_fund_data(cnpj, fund_name, new_quotes):
     merged.sort(key=lambda q: q['date'])
     now = datetime.utcnow().isoformat()
 
-    _table.put_item(Item={
+    _put_item({
         'PK': f'FUND#{cnpj_clean}',
         'SK': 'DATA',
         'entity_type': 'fund_quotes',
@@ -168,7 +185,7 @@ def save_b3_data(ticker, name, new_quotes):
 
     last_val = merged[-1].get('quota', merged[-1].get('close', 0)) if merged else 0
 
-    _table.put_item(Item={
+    _put_item({
         'PK': f'B3#{ticker_clean}',
         'SK': 'DATA',
         'entity_type': 'b3_quotes',
@@ -234,7 +251,7 @@ def save_benchmark_data(name, display_name, series_type, new_points):
     merged.sort(key=lambda p: p['date'])
     now = datetime.utcnow().isoformat()
 
-    _table.put_item(Item={
+    _put_item({
         'PK': f'BENCH#{name}',
         'SK': 'DATA',
         'entity_type': 'benchmark_series',
@@ -277,7 +294,7 @@ def load_manifest(user_id='anonymous'):
 def save_manifest(manifest_data, user_id='anonymous'):
     """Salva manifest de carteiras do usuário."""
     try:
-        _table.put_item(Item={
+        _put_item({
             'PK': f'USER#{user_id}',
             'SK': 'MANIFEST',
             'entity_type': 'manifest',
@@ -359,7 +376,7 @@ def save_portfolio(portfolio_data, portfolio_id=None, user_id='anonymous'):
     portfolio_data['updated_at'] = now
     portfolio_data['id'] = p_id
 
-    _table.put_item(Item={
+    _put_item({
         'PK': f'USER#{user_id}',
         'SK': f'PORTFOLIO#{p_id}',
         'entity_type': 'portfolio',
@@ -406,7 +423,7 @@ def create_portfolio(name, base_funds=None, user_id='anonymous'):
         'updated_at': now
     }
 
-    _table.put_item(Item={
+    _put_item({
         'PK': f'USER#{user_id}',
         'SK': f'PORTFOLIO#{p_id}',
         'entity_type': 'portfolio',
@@ -540,7 +557,7 @@ def load_data_sources(user_id='anonymous'):
 
 def save_data_sources(sources_config, user_id='anonymous'):
     try:
-        _table.put_item(Item={
+        _put_item({
             'PK': f'USER#{user_id}',
             'SK': 'CONFIG#SOURCES',
             'entity_type': 'config_sources',
@@ -565,7 +582,7 @@ def load_benchmarks_config(user_id='anonymous'):
 
 def save_benchmarks_config(benchmarks_list, user_id='anonymous'):
     try:
-        _table.put_item(Item={
+        _put_item({
             'PK': f'USER#{user_id}',
             'SK': 'CONFIG#BENCHMARKS',
             'entity_type': 'config_benchmarks',
