@@ -503,13 +503,14 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
         p = get_portfolio_by_id(entry['id'], user_id)
         if p and 'funds' in p:
             for f in p['funds']:
-                existing = any(
-                    (ef.get('cnpj') and ef['cnpj'] == f.get('cnpj')) or
-                    (ef.get('code') and ef['code'] == f.get('code'))
-                    for ef in all_funds
-                )
-                if not existing:
-                    all_funds.append(f)
+                existing_f = next((ef for ef in all_funds if (ef.get('cnpj') and ef['cnpj'] == f.get('cnpj')) or (ef.get('code') and ef['code'] == f.get('code'))), None)
+                if not existing_f:
+                    f_copy = dict(f)
+                    f_copy['portfolios'] = [entry.get('name', entry['id'])]
+                    all_funds.append(f_copy)
+                else:
+                    if entry.get('name', entry['id']) not in existing_f['portfolios']:
+                        existing_f['portfolios'].append(entry.get('name', entry['id']))
 
     funds_status = []
     b3_status = []
@@ -523,6 +524,8 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
                 'name': f.get('name'),
                 'ticker': ticker,
                 'type': 'b3',
+                'portfolios': f.get('portfolios', []),
+                'portfolios_display': ', '.join(f.get('portfolios', [])),
                 'has_data': len(quotes) > 0,
                 'record_count': len(quotes),
                 'start_date': quotes[0]['date'] if quotes else None,
@@ -538,6 +541,8 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
                 'cnpj': f.get('cnpj'),
                 'cnpj_clean': cnpj_clean,
                 'type': 'fund',
+                'portfolios': f.get('portfolios', []),
+                'portfolios_display': ', '.join(f.get('portfolios', [])),
                 'has_data': len(quotes) > 0,
                 'record_count': len(quotes),
                 'start_date': quotes[0]['date'] if quotes else None,
@@ -547,11 +552,12 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
 
     # Benchmarks
     benchmarks_status = []
-    bench_ids = ['cdi', 'ipca', 'poupanca', 'ibov', 'ifix', 'sp500', 'btc', 'usd']
+    benchmarks_config = load_benchmarks_config(user_id)
+    bench_ids = [b['id'] for b in benchmarks_config] if benchmarks_config else ['cdi', 'ipca', 'poupanca', 'ibov', 'ifix', 'sp500', 'btc', 'usd']
     for bid in bench_ids:
         series = load_benchmark_data(bid)
         benchmarks_status.append({
-            'id': bid,
+            'benchmark': bid,
             'has_data': len(series) > 0,
             'record_count': len(series),
             'start_date': series[0]['date'] if series else None,

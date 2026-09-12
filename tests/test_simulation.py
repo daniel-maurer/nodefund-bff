@@ -1,3 +1,4 @@
+import time
 """
 Testes unitários para o motor de simulação, rebalanceamento e persistência de dados.
 """
@@ -12,13 +13,13 @@ from core.simulation import simulate_portfolio
 class TestStorageAndSimulation(unittest.TestCase):
     def setUp(self):
         # Limpar arquivos de CNPJs de teste
-        for c in ["11111111000111", "22222222000122", "33333333000133"]:
+        for c in ["11111111000" + str(int(time.time()))[-3:], "22222222000122", "33333333000133"]:
             j, cv = get_fund_file_paths(c)
             if os.path.exists(j): os.remove(j)
             if os.path.exists(cv): os.remove(cv)
         
     def tearDown(self):
-        for c in ["11111111000111", "22222222000122", "33333333000133"]:
+        for c in ["11111111000" + str(int(time.time()))[-3:], "22222222000122", "33333333000133"]:
             j, cv = get_fund_file_paths(c)
             if os.path.exists(j): os.remove(j)
             if os.path.exists(cv): os.remove(cv)
@@ -32,7 +33,7 @@ class TestStorageAndSimulation(unittest.TestCase):
 
     def test_incremental_fund_save(self):
         # Simula salvar dados iniciais
-        c = "11111111000111"
+        c = "11111111000" + str(int(time.time()))[-3:]
         batch_1 = [
             {"date": "2024-05-02", "quota": 1.0, "net_worth": 1000.0},
             {"date": "2024-05-03", "quota": 1.05, "net_worth": 1050.0},
