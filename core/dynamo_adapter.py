@@ -562,8 +562,8 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
         'funds': funds_status,
         'b3_assets': b3_status,
         'benchmarks': benchmarks_status,
-        'portfolio_id': portfolio_id or 'all',
-        'is_global': not portfolio_id or portfolio_id == 'all',
+        'portfolio_id': portfolio_id or 'global',
+        'is_global': not portfolio_id or portfolio_id == 'all' or portfolio_id == 'global',
         'portfolio_name': 'Global',
         'storage': 'dynamodb'
     }

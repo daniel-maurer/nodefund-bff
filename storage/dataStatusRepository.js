@@ -111,9 +111,9 @@ class DataStatusRepository {
       benchmarks: benchmarksStatus,
       global_start_date: allDates.length > 0 ? allDates.sort()[0] : null,
       global_end_date: allEndDates.length > 0 ? allEndDates.sort().reverse()[0] : null,
-      portfolio_id: portfolioId || 'all',
+      portfolio_id: portfolioId || 'global',
       portfolio_name: 'Global',
-      is_global: !portfolioId || portfolioId === 'all',
+      is_global: !portfolioId || portfolioId === 'all' || portfolioId === 'global',
       storage: 'dynamodb'
     };
   }
