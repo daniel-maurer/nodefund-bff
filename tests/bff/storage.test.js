@@ -89,8 +89,8 @@ test('MarketRepository - retorna as 4 cotações principais formatadas', async (
 test('DataStatusRepository - inventário de fundos, b3 e benchmarks', async () => {
   const status = await DataStatusRepository.getDataStatus();
   assert.ok(status);
-  assert.ok(Array.isArray(status.funds_status));
-  assert.ok(Array.isArray(status.b3_status));
-  assert.ok(Array.isArray(status.benchmarks_status));
+  assert.ok(Array.isArray(status.funds));
+  assert.ok(Array.isArray(status.b3_assets));
+  assert.ok(Array.isArray(status.benchmarks));
   assert.strictEqual(status.is_global, true);
 });

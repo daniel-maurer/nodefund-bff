@@ -113,15 +113,21 @@ def save_fund_data(cnpj, fund_name, new_quotes):
     # Merge incremental por data
     existing_dates = {q['date'] for q in existing}
     merged = list(existing)
+    
+    added_count = 0
+    updated_count = 0
+    
     for q in new_quotes:
         if q['date'] in existing_dates:
             # Atualiza registro existente
             for i, eq in enumerate(merged):
                 if eq['date'] == q['date']:
                     merged[i] = q
+                    updated_count += 1
                     break
         else:
             merged.append(q)
+            added_count += 1
 
     merged.sort(key=lambda q: q['date'])
     now = datetime.utcnow().isoformat()
@@ -138,13 +144,12 @@ def save_fund_data(cnpj, fund_name, new_quotes):
         'last_quota': str(merged[-1].get('quota', 0)) if merged else None,
         'updated_at': now
     })
-
+    
     return {
-        'cnpj': cnpj_clean,
-        'name': fund_name,
-        'total_quotes': len(merged),
-        'new_quotes': len(new_quotes),
-        'updated_at': now
+        "cnpj": cnpj_clean,
+        "added": added_count,
+        "updated": updated_count,
+        "total": len(merged)
     }
 
 
@@ -171,14 +176,20 @@ def save_b3_data(ticker, name, new_quotes):
 
     existing_dates = {q['date'] for q in existing}
     merged = list(existing)
+    
+    added_count = 0
+    updated_count = 0
+    
     for q in new_quotes:
         if q['date'] in existing_dates:
             for i, eq in enumerate(merged):
                 if eq['date'] == q['date']:
                     merged[i] = q
+                    updated_count += 1
                     break
         else:
             merged.append(q)
+            added_count += 1
 
     merged.sort(key=lambda q: q['date'])
     now = datetime.utcnow().isoformat()
@@ -197,6 +208,13 @@ def save_b3_data(ticker, name, new_quotes):
         'last_quota': str(last_val),
         'updated_at': now
     })
+    
+    return {
+        "ticker": ticker_clean,
+        "added": added_count,
+        "updated": updated_count,
+        "total": len(merged)
+    }
 
     return {
         'ticker': ticker_clean,
@@ -239,14 +257,20 @@ def save_benchmark_data(name, display_name, series_type, new_points):
 
     existing_dates = {p['date'] for p in existing}
     merged = list(existing)
+    
+    added_count = 0
+    updated_count = 0
+    
     for p in new_points:
         if p['date'] in existing_dates:
             for i, ep in enumerate(merged):
                 if ep['date'] == p['date']:
                     merged[i] = p
+                    updated_count += 1
                     break
         else:
             merged.append(p)
+            added_count += 1
 
     merged.sort(key=lambda p: p['date'])
     now = datetime.utcnow().isoformat()
@@ -265,11 +289,12 @@ def save_benchmark_data(name, display_name, series_type, new_points):
     })
 
     return {
-        'benchmark': name,
-        'name': display_name,
-        'total_points': len(merged),
-        'new_points': len(new_points),
-        'updated_at': now
+        "benchmark": name,
+        "display_name": display_name,
+        "series_type": series_type,
+        "added": added_count,
+        "updated": updated_count,
+        "total": len(merged)
     }
 
 
@@ -534,11 +559,12 @@ def get_data_status(portfolio_id=None, user_id='anonymous'):
         })
 
     return {
-        'funds_status': funds_status,
-        'b3_status': b3_status,
-        'benchmarks_status': benchmarks_status,
+        'funds': funds_status,
+        'b3_assets': b3_status,
+        'benchmarks': benchmarks_status,
         'portfolio_id': portfolio_id or 'all',
         'is_global': not portfolio_id or portfolio_id == 'all',
+        'portfolio_name': 'Global',
         'storage': 'dynamodb'
     }
 

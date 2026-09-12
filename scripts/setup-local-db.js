@@ -120,6 +120,81 @@ async function seedData() {
     }));
   }
 
+  // Migrar dados de Fundos
+  const fundsDir = path.join(dataDir, 'funds');
+  if (fs.existsSync(fundsDir)) {
+    console.log('[Setup] Migrando cotações de fundos...');
+    const files = fs.readdirSync(fundsDir).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      const data = JSON.parse(fs.readFileSync(path.join(fundsDir, f), 'utf8'));
+      await docClient.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `FUND#${data.cnpj}`,
+          SK: 'DATA',
+          entity_type: 'fund_quotes',
+          name: data.name || '',
+          quotes: data.quotes || [],
+          record_count: data.total_records || 0,
+          start_date: data.start_date || null,
+          end_date: data.end_date || null,
+          last_quota: data.quotes && data.quotes.length > 0 ? (data.quotes[data.quotes.length - 1].quota || 0).toString() : null,
+          updated_at: data.updated_at || new Date().toISOString()
+        }
+      }));
+    }
+  }
+
+  // Migrar dados da B3
+  const b3Dir = path.join(dataDir, 'b3');
+  if (fs.existsSync(b3Dir)) {
+    console.log('[Setup] Migrando cotações da B3...');
+    const files = fs.readdirSync(b3Dir).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      const data = JSON.parse(fs.readFileSync(path.join(b3Dir, f), 'utf8'));
+      await docClient.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `B3#${data.ticker}`,
+          SK: 'DATA',
+          entity_type: 'b3_quotes',
+          name: data.name || '',
+          quotes: data.quotes || [],
+          record_count: data.total_records || 0,
+          start_date: data.start_date || null,
+          end_date: data.end_date || null,
+          last_quota: data.quotes && data.quotes.length > 0 ? (data.quotes[data.quotes.length - 1].quota || data.quotes[data.quotes.length - 1].close || 0).toString() : null,
+          updated_at: data.updated_at || new Date().toISOString()
+        }
+      }));
+    }
+  }
+
+  // Migrar dados de Benchmarks
+  const benchDir = path.join(dataDir, 'benchmarks');
+  if (fs.existsSync(benchDir)) {
+    console.log('[Setup] Migrando séries de benchmarks...');
+    const files = fs.readdirSync(benchDir).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      const data = JSON.parse(fs.readFileSync(path.join(benchDir, f), 'utf8'));
+      await docClient.send(new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `BENCH#${data.benchmark}`,
+          SK: 'DATA',
+          entity_type: 'benchmark_series',
+          name: data.display_name || '',
+          series_type: data.series_type || 'index',
+          series: data.series || [],
+          record_count: data.total_records || 0,
+          start_date: data.start_date || null,
+          end_date: data.end_date || null,
+          updated_at: data.updated_at || new Date().toISOString()
+        }
+      }));
+    }
+  }
+
   console.log('[Setup] Seed completo!');
 }
 

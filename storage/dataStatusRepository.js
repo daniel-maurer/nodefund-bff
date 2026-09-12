@@ -106,12 +106,13 @@ class DataStatusRepository {
     ];
 
     return {
-      funds_status: fundsStatus,
-      b3_status: b3Status,
-      benchmarks_status: benchmarksStatus,
+      funds: fundsStatus,
+      b3_assets: b3Status,
+      benchmarks: benchmarksStatus,
       global_start_date: allDates.length > 0 ? allDates.sort()[0] : null,
       global_end_date: allEndDates.length > 0 ? allEndDates.sort().reverse()[0] : null,
       portfolio_id: portfolioId || 'all',
+      portfolio_name: 'Global',
       is_global: !portfolioId || portfolioId === 'all',
       storage: 'dynamodb'
     };
