@@ -38,6 +38,21 @@ def build_aligned_daily_timeline(funds: List[Dict[str, Any]], start_date: str, e
     for fund in funds:
         key = get_asset_key(fund)
         quotes = load_asset_data(fund)
+        if not quotes:
+            a_type = fund.get("type", "fund")
+            code = fund.get("code") or fund.get("id") or ""
+            ticker = clean_ticker(code)
+            if a_type == "b3" or (ticker and len(ticker) <= 7):
+                try:
+                    from .b3_fetcher import fetch_b3_quotes_from_yahoo
+                    from .storage import save_b3_data
+                    if ticker:
+                        fetched = fetch_b3_quotes_from_yahoo(ticker, start_date, end_date)
+                        if fetched:
+                            save_b3_data(ticker, fund.get("name", ticker), fetched)
+                            quotes = fetched
+                except Exception as ex:
+                    print(f"[Simulation Auto-Fetch] Erro ao buscar cotações para {code}: {ex}")
         # Filtrar pelo período
         f_map = {}
         for q in quotes:

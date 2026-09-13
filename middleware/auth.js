@@ -33,13 +33,20 @@ const PUBLIC_ROUTES = [
   '/api/auth/refresh'
 ];
 
-function isPublicRoute(path) {
-  return PUBLIC_ROUTES.some(route => path === route || path.startsWith(route + '/'));
+function isPublicRoute(req) {
+  const fullPath = (req.originalUrl || '').split('?')[0];
+  const subPath = (req.path || '').split('?')[0];
+  return PUBLIC_ROUTES.some(route => {
+    const stripped = route.replace(/^\/api/, '');
+    return fullPath === route || fullPath.startsWith(route + '/') ||
+           subPath === route || subPath.startsWith(route + '/') ||
+           subPath === stripped || subPath.startsWith(stripped + '/');
+  });
 }
 
 async function authMiddleware(req, res, next) {
   // Rotas públicas passam sem autenticação
-  if (isPublicRoute(req.path)) {
+  if (isPublicRoute(req)) {
     req.userId = 'anonymous';
     return next();
   }

@@ -28,10 +28,11 @@ class MarketQuote {
   }
 
   static formatPtBrNumber(val, decimals = 2) {
-    if (isNaN(val)) return '0,00';
-    const parts = Number(val).toFixed(decimals).split('.');
-    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return `${intPart},${parts[1]}`;
+    if (isNaN(val)) return decimals > 0 ? `0,${'0'.repeat(decimals)}` : '0';
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(Number(val));
   }
 
   formatDefault(id, val) {

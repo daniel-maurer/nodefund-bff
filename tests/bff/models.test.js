@@ -91,6 +91,9 @@ test('MarketQuote Model - formatação numérica padrão brasileiro', () => {
   });
   assert.strictEqual(quoteUsd.formatted_value, 'R$ 5,12');
   assert.strictEqual(quoteUsd.is_positive, false);
+
+  // Valida formatação sem casas decimais (ex: Ibovespa 177.419 pts)
+  assert.strictEqual(MarketQuote.formatPtBrNumber(177419, 0), '177.419');
 });
 
 test('SimulationRequest Model - validação de limites e datas', () => {

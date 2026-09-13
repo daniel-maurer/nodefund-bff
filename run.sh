@@ -6,8 +6,14 @@
 
 export PATH="$HOME/.local/bin:$PATH"
 
-PORT=${1:-8000}
-ANALYTICS_PORT=${2:-8001}
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+PORT=${1:-${PORT:-8000}}
+ANALYTICS_PORT=${2:-${ANALYTICS_PORT:-8001}}
 
 echo "========================================================"
 echo " nodefund · Distributed Node Architecture"
