@@ -193,11 +193,12 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   });
 });
 
-// ───────────────────── Health Check (sem autenticação) ─────────────────────
-// Deve ficar ANTES do authMiddleware para o ALB receber 200 sem token
+// ───────────────────── Health Check & Cotações Públicas (sem autenticação) ─────────────────────
+// Devem ficar ANTES do authMiddleware para resposta pública imediata
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+app.use('/api/market', marketRoutes);
 
 // ───────────────────── Middleware de Autenticação ─────────────────────
 // Todas as rotas /api/* abaixo desta linha requerem autenticação
@@ -241,7 +242,6 @@ app.use('/api/portfolios', portfolioRoutes);
 app.use('/api/simulate', simulationRoutes);
 app.use('/api/rebalance', rebalanceRoutes);
 app.use('/api/config', configRoutes);
-app.use('/api/market', marketRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/nodes', nodesRoutes);
 

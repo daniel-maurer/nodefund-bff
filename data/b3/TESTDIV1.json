@@ -1,0 +1,39 @@
+{
+  "ticker": "TESTDIV1",
+  "name": "Ativo com Dividendos",
+  "type": "b3",
+  "updated_at": "2026-09-13T20:50:50.401782",
+  "total_records": 4,
+  "start_date": "2024-05-02",
+  "end_date": "2024-06-03",
+  "quotes": [
+    {
+      "date": "2024-05-02",
+      "quota": 50.0,
+      "close": 50.0
+    },
+    {
+      "date": "2024-05-15",
+      "quota": 52.0,
+      "close": 52.0
+    },
+    {
+      "date": "2024-05-31",
+      "quota": 51.0,
+      "close": 51.0
+    },
+    {
+      "date": "2024-06-03",
+      "quota": 55.0,
+      "close": 55.0
+    }
+  ],
+  "dividends": [
+    {
+      "date": "2024-05-15",
+      "amount": 2.5,
+      "ticker": "TESTDIV1",
+      "type": "Dividendo"
+    }
+  ]
+}

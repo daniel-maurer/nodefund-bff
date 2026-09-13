@@ -353,13 +353,32 @@ def load_b3_data(ticker: str) -> List[Dict[str, Any]]:
         print(f"Erro ao carregar ativo B3 {ticker}: {e}")
         return []
 
-def save_b3_data(ticker: str, name: str, new_quotes: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Salva ou atualiza incrementalmente as cotações de um ativo da B3."""
+def load_b3_dividends(ticker: str) -> List[Dict[str, Any]]:
+    """Carrega histórico de dividendos e proventos de um ativo da B3."""
+    json_path, _ = get_b3_file_paths(ticker)
+    if not os.path.exists(json_path):
+        return []
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("dividends", [])
+    except Exception as e:
+        print(f"Erro ao carregar dividendos B3 {ticker}: {e}")
+        return []
+
+def save_b3_data(
+    ticker: str,
+    name: str,
+    new_quotes: List[Dict[str, Any]],
+    dividends: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """Salva ou atualiza incrementalmente as cotações e dividendos de um ativo da B3."""
     ensure_dirs()
     t_clean = clean_ticker(ticker)
     json_path, csv_path = get_b3_file_paths(t_clean)
     
     existing = load_b3_data(t_clean)
+    existing_divs = load_b3_dividends(t_clean)
     by_date = {q["date"]: q for q in existing}
     
     added_count = 0
@@ -374,6 +393,14 @@ def save_b3_data(ticker: str, name: str, new_quotes: List[Dict[str, Any]]) -> Di
             added_count += 1
             
     sorted_quotes = [by_date[d] for d in sorted(by_date.keys())]
+
+    # Mesclar dividendos
+    divs_by_date = {d["date"]: d for d in existing_divs}
+    if dividends:
+        for div in dividends:
+            dt = div["date"]
+            divs_by_date[dt] = div
+    sorted_dividends = [divs_by_date[d] for d in sorted(divs_by_date.keys())]
     
     payload = {
         "ticker": t_clean,
@@ -383,7 +410,8 @@ def save_b3_data(ticker: str, name: str, new_quotes: List[Dict[str, Any]]) -> Di
         "total_records": len(sorted_quotes),
         "start_date": sorted_quotes[0]["date"] if sorted_quotes else None,
         "end_date": sorted_quotes[-1]["date"] if sorted_quotes else None,
-        "quotes": sorted_quotes
+        "quotes": sorted_quotes,
+        "dividends": sorted_dividends
     }
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
@@ -399,6 +427,7 @@ def save_b3_data(ticker: str, name: str, new_quotes: List[Dict[str, Any]]) -> Di
         "added": added_count,
         "updated": updated_count,
         "total": len(sorted_quotes),
+        "total_dividends": len(sorted_dividends),
         "start_date": payload["start_date"],
         "end_date": payload["end_date"]
     }
@@ -412,6 +441,16 @@ def load_asset_data(asset: Dict[str, Any]) -> List[Dict[str, Any]]:
     else:
         cnpj = asset.get("cnpj") or asset.get("code") or ""
         return load_fund_data(cnpj)
+
+def load_asset_dividends(asset: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Carrega histórico de proventos de um ativo (B3 ou Fundo)."""
+    a_type = asset.get("type", "fund")
+    if a_type == "b3":
+        code = asset.get("code") or asset.get("id") or ""
+        return load_b3_dividends(code)
+    else:
+        # Fundos de previdência/mútuos CVM incorporam proventos na cota diária
+        return []
 
 # =============================================================================
 # ARMAZENAMENTO DE BENCHMARKS

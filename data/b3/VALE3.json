@@ -1,8 +1,8 @@
 {
   "ticker": "VALE3",
-  "name": "Vale ON",
+  "name": "Vale ON (VALE3)",
   "type": "b3",
-  "updated_at": "2026-09-10T20:24:05.880028",
+  "updated_at": "2026-09-13T20:12:22.904576",
   "total_records": 584,
   "start_date": "2024-05-02",
   "end_date": "2026-08-31",
@@ -2926,6 +2926,44 @@
       "date": "2026-08-31",
       "quota": 77.8499984741211,
       "close": 77.8499984741211
+    }
+  ],
+  "dividends": [
+    {
+      "date": "2024-08-05",
+      "amount": 2.093798,
+      "ticker": "VALE3",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2024-12-12",
+      "amount": 0.520531,
+      "ticker": "VALE3",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-03-10",
+      "amount": 2.141847,
+      "ticker": "VALE3",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-08-13",
+      "amount": 1.895387,
+      "ticker": "VALE3",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-12-12",
+      "amount": 3.581771,
+      "ticker": "VALE3",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2026-08-12",
+      "amount": 2.030722,
+      "ticker": "VALE3",
+      "type": "Dividendo"
     }
   ]
 }

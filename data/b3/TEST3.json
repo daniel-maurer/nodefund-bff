@@ -2,7 +2,7 @@
   "ticker": "TEST3",
   "name": "Ativo Teste B3",
   "type": "b3",
-  "updated_at": "2026-09-11T19:13:17.732982",
+  "updated_at": "2026-09-13T20:50:49.126541",
   "total_records": 2,
   "start_date": "2024-05-02",
   "end_date": "2024-05-03",
@@ -17,5 +17,6 @@
       "quota": 31.5,
       "close": 31.5
     }
-  ]
+  ],
+  "dividends": []
 }

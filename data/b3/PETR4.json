@@ -1,8 +1,8 @@
 {
   "ticker": "PETR4",
-  "name": "Petrobras PN",
+  "name": "Petrobras PN (PETR4)",
   "type": "b3",
-  "updated_at": "2026-09-10T20:24:04.953495",
+  "updated_at": "2026-09-13T20:12:22.177186",
   "total_records": 584,
   "start_date": "2024-05-02",
   "end_date": "2026-08-31",
@@ -2926,6 +2926,80 @@
       "date": "2026-08-31",
       "quota": 45.02000045776367,
       "close": 45.02000045776367
+    }
+  ],
+  "dividends": [
+    {
+      "date": "2024-05-03",
+      "amount": 1.776022,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2024-06-12",
+      "amount": 1.043242,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2024-08-22",
+      "amount": 1.0532,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2024-12-12",
+      "amount": 1.551743,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2024-12-26",
+      "amount": 1.356891,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-04-17",
+      "amount": 0.74813,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-06-03",
+      "amount": 0.909166,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-08-22",
+      "amount": 0.671924,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2025-12-23",
+      "amount": 0.952128,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2026-04-23",
+      "amount": 0.663103,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2026-06-02",
+      "amount": 0.700973,
+      "ticker": "PETR4",
+      "type": "Dividendo"
+    },
+    {
+      "date": "2026-08-24",
+      "amount": 1.348143,
+      "ticker": "PETR4",
+      "type": "Dividendo"
     }
   ]
 }

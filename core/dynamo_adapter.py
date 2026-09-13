@@ -169,10 +169,25 @@ def load_b3_data(ticker):
         return []
 
 
-def save_b3_data(ticker, name, new_quotes):
-    """Salva/mescla cotações B3 no DynamoDB."""
+def load_b3_dividends(ticker):
+    """Carrega proventos do ativo B3 do DynamoDB."""
+    ticker_clean = clean_ticker(ticker)
+    try:
+        response = _table.get_item(Key={'PK': f'B3#{ticker_clean}', 'SK': 'DATA'})
+        item = response.get('Item')
+        if item and 'dividends' in item:
+            return _convert_decimals(item['dividends'])
+        return []
+    except Exception as e:
+        print(f"[DynamoDB] Erro ao carregar dividendos B3 {ticker_clean}: {e}")
+        return []
+
+
+def save_b3_data(ticker, name, new_quotes, dividends=None):
+    """Salva/mescla cotações e dividendos B3 no DynamoDB."""
     ticker_clean = clean_ticker(ticker)
     existing = load_b3_data(ticker_clean)
+    existing_divs = load_b3_dividends(ticker_clean)
 
     existing_dates = {q['date'] for q in existing}
     merged = list(existing)
@@ -192,8 +207,15 @@ def save_b3_data(ticker, name, new_quotes):
             added_count += 1
 
     merged.sort(key=lambda q: q['date'])
-    now = datetime.utcnow().isoformat()
 
+    # Mesclar dividendos
+    divs_by_date = {d['date']: d for d in existing_divs}
+    if dividends:
+        for div in dividends:
+            divs_by_date[div['date']] = div
+    merged_divs = sorted(list(divs_by_date.values()), key=lambda d: d['date'])
+
+    now = datetime.utcnow().isoformat()
     last_val = merged[-1].get('quota', merged[-1].get('close', 0)) if merged else 0
 
     _put_item({
@@ -202,7 +224,9 @@ def save_b3_data(ticker, name, new_quotes):
         'entity_type': 'b3_quotes',
         'name': name,
         'quotes': merged,
+        'dividends': merged_divs,
         'record_count': len(merged),
+        'dividend_count': len(merged_divs),
         'start_date': merged[0]['date'] if merged else None,
         'end_date': merged[-1]['date'] if merged else None,
         'last_quota': str(last_val),
@@ -211,17 +235,11 @@ def save_b3_data(ticker, name, new_quotes):
     
     return {
         "ticker": ticker_clean,
+        "name": name,
         "added": added_count,
         "updated": updated_count,
-        "total": len(merged)
-    }
-
-    return {
-        'ticker': ticker_clean,
-        'name': name,
-        'total_quotes': len(merged),
-        'new_quotes': len(new_quotes),
-        'updated_at': now
+        "total": len(merged),
+        "total_dividends": len(merged_divs)
     }
 
 
@@ -234,6 +252,16 @@ def load_asset_data(asset):
     else:
         code = asset.get('code', asset.get('cnpj', ''))
         return load_fund_data(code)
+
+
+def load_asset_dividends(asset):
+    """Carrega histórico de dividendos de um ativo (B3 ou Fundo)."""
+    asset_type = asset.get('type', 'fund')
+    if asset_type == 'b3':
+        code = asset.get('code', asset.get('ticker', ''))
+        return load_b3_dividends(code)
+    else:
+        return []
 
 
 # ─────────────────── Benchmarks ───────────────────

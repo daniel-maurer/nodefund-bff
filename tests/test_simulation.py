@@ -247,6 +247,73 @@ class TestStorageAndSimulation(unittest.TestCase):
             contrib_sum_usd = sum(entry["smart_contributions_usd"].values())
             self.assertAlmostEqual(contrib_sum_usd, entry["smart_return_pct_usd"], delta=0.05)
 
+    def test_dividend_analytics_and_total_return(self):
+        """
+        Testa o cálculo quantitativo de proventos, fluxo de caixa de dividendos,
+        grade anual e séries de Total Return (Cota vs Cota + Dividendos).
+        """
+        from core.storage import save_b3_data
+
+        ticker = "TESTDIV1"
+        quotes = [
+            {"date": "2024-05-02", "quota": 50.0, "close": 50.0},
+            {"date": "2024-05-15", "quota": 52.0, "close": 52.0},
+            {"date": "2024-05-31", "quota": 51.0, "close": 51.0},
+            {"date": "2024-06-03", "quota": 55.0, "close": 55.0},
+        ]
+        dividends = [
+            {"date": "2024-05-15", "amount": 2.50, "ticker": ticker, "type": "Dividendo"}
+        ]
+        save_b3_data(ticker, "Ativo com Dividendos", quotes, dividends=dividends)
+
+        portfolio = {
+            "name": "Carteira Dividendos Teste",
+            "funds": [
+                {
+                    "id": "testdiv1",
+                    "type": "b3",
+                    "code": ticker,
+                    "name": "Ativo com Dividendos",
+                    "target_pct": 100.0,
+                    "min_investment": 50.0
+                }
+            ]
+        }
+
+        res = simulate_portfolio(
+            portfolio_config=portfolio,
+            initial_capital=10000.0,
+            monthly_contribution=1000.0,
+            start_date="2024-05-02",
+            end_date="2024-06-03"
+        )
+
+        self.assertNotIn("error", res)
+        self.assertIn("dividends", res)
+        divs_res = res["dividends"]
+        self.assertTrue(divs_res["has_dividends"])
+        self.assertGreater(divs_res["total_dividends_brl"], 0.0)
+
+        # Extrato cronológico
+        self.assertGreaterEqual(len(divs_res["chronological_list"]), 1)
+        item = divs_res["chronological_list"][0]
+        self.assertEqual(item["ticker"], ticker)
+        self.assertEqual(item["amount_per_share"], 2.50)
+        self.assertGreater(item["shares"], 0)
+        self.assertAlmostEqual(item["total_amount"], item["shares"] * 2.50, delta=0.02)
+
+        # Grade Anual
+        self.assertIn("all", divs_res["annual_grid"])
+        self.assertIn(ticker, divs_res["annual_grid"])
+        self.assertIn("2024", divs_res["annual_grid"]["all"])
+
+        # Rentabilidade Total Return vs Cota Pura
+        tr_series = divs_res["total_return_series"]["portfolio"]
+        self.assertIn("price_return_pct", tr_series)
+        self.assertIn("total_return_pct", tr_series)
+        # Como houve dividendo de R$ 2,50/ação, o Total Return final deve ser maior ou igual ao Preço Puro
+        self.assertGreater(tr_series["total_return_pct"][-1], tr_series["price_return_pct"][-1])
+
 if __name__ == "__main__":
     unittest.main()
 

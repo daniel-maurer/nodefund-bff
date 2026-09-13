@@ -304,12 +304,12 @@ def get_market_quotes_summary(refresh: bool = False) -> List[Dict[str, Any]]:
         summary.append({
             "id": "sp500",
             "name": "S&P 500",
-            "raw_value": 7686.14,
-            "formatted_value": "7.686,14 pts",
-            "pct_change": -0.33,
-            "is_positive": False,
-            "date": "31/08/2026",
-            "raw_date": "2026-08-31"
+            "raw_value": 7656.98,
+            "formatted_value": "7.656,98 pts",
+            "pct_change": 0.86,
+            "is_positive": True,
+            "date": "11/09/2026",
+            "raw_date": "2026-09-11"
         })
 
     # 2. IBOV
@@ -336,12 +336,12 @@ def get_market_quotes_summary(refresh: bool = False) -> List[Dict[str, Any]]:
         summary.append({
             "id": "ibov",
             "name": "Ibovespa",
-            "raw_value": 177419.0,
-            "formatted_value": "177.419 pts",
-            "pct_change": 1.0,
-            "is_positive": True,
-            "date": "31/08/2026",
-            "raw_date": "2026-08-31"
+            "raw_value": 187206.89,
+            "formatted_value": "187.207 pts",
+            "pct_change": -0.56,
+            "is_positive": False,
+            "date": "11/09/2026",
+            "raw_date": "2026-09-11"
         })
 
     # 3. Bitcoin em Dólar
@@ -368,12 +368,12 @@ def get_market_quotes_summary(refresh: bool = False) -> List[Dict[str, Any]]:
         summary.append({
             "id": "btc",
             "name": "Bitcoin (USD)",
-            "raw_value": 78548.63,
-            "formatted_value": "US$ 78.548,63",
-            "pct_change": 1.13,
-            "is_positive": True,
-            "date": "31/08/2026",
-            "raw_date": "2026-08-31"
+            "raw_value": 76793.53,
+            "formatted_value": "US$ 76.793,53",
+            "pct_change": -0.65,
+            "is_positive": False,
+            "date": "13/09/2026",
+            "raw_date": "2026-09-13"
         })
 
     # 4. Câmbio Dólar Hoje (USD/BRL)
@@ -399,12 +399,12 @@ def get_market_quotes_summary(refresh: bool = False) -> List[Dict[str, Any]]:
         summary.append({
             "id": "usd",
             "name": "Dólar Hoje",
-            "raw_value": 5.18,
-            "formatted_value": "R$ 5,18",
-            "pct_change": -0.18,
-            "is_positive": False,
-            "date": "31/08/2026",
-            "raw_date": "2026-08-31"
+            "raw_value": 5.13,
+            "formatted_value": "R$ 5,13",
+            "pct_change": 0.02,
+            "is_positive": True,
+            "date": "13/09/2026",
+            "raw_date": "2026-09-13"
         })
 
     return summary

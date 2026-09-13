@@ -11,7 +11,7 @@ Implementa:
 import math
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
-from .storage import load_portfolio, load_fund_data, load_benchmark_data, clean_cnpj, clean_ticker, load_asset_data
+from .storage import load_portfolio, load_fund_data, load_benchmark_data, clean_cnpj, clean_ticker, load_asset_data, load_asset_dividends
 from .config_manager import load_benchmarks_config
 
 def get_asset_key(asset: Dict[str, Any]) -> str:
@@ -38,21 +38,35 @@ def build_aligned_daily_timeline(funds: List[Dict[str, Any]], start_date: str, e
     for fund in funds:
         key = get_asset_key(fund)
         quotes = load_asset_data(fund)
+        a_type = fund.get("type", "fund")
+        code = fund.get("code") or fund.get("id") or ""
+        ticker = clean_ticker(code)
+
         if not quotes:
-            a_type = fund.get("type", "fund")
-            code = fund.get("code") or fund.get("id") or ""
-            ticker = clean_ticker(code)
             if a_type == "b3" or (ticker and len(ticker) <= 7):
                 try:
-                    from .b3_fetcher import fetch_b3_quotes_from_yahoo
+                    from .b3_fetcher import fetch_b3_history_from_yahoo
                     from .storage import save_b3_data
                     if ticker:
-                        fetched = fetch_b3_quotes_from_yahoo(ticker, start_date, end_date)
-                        if fetched:
-                            save_b3_data(ticker, fund.get("name", ticker), fetched)
-                            quotes = fetched
+                        fetched_quotes, fetched_divs = fetch_b3_history_from_yahoo(ticker, start_date, end_date)
+                        if fetched_quotes:
+                            save_b3_data(ticker, fund.get("name", ticker), fetched_quotes, dividends=fetched_divs)
+                            quotes = fetched_quotes
                 except Exception as ex:
                     print(f"[Simulation Auto-Fetch] Erro ao buscar cotações para {code}: {ex}")
+        else:
+            # Se já tem cotações mas não tem dividendos em cache para ativo B3, busca os proventos
+            if (a_type == "b3" or (ticker and len(ticker) <= 7)) and not load_asset_dividends(fund):
+                try:
+                    from .b3_fetcher import fetch_b3_dividends_from_yahoo
+                    from .storage import save_b3_data
+                    if ticker:
+                        fetched_divs = fetch_b3_dividends_from_yahoo(ticker, start_date, end_date)
+                        if fetched_divs:
+                            save_b3_data(ticker, fund.get("name", ticker), quotes, dividends=fetched_divs)
+                except Exception as ex:
+                    print(f"[Simulation Dividends Fetch] Erro ao buscar dividendos para {ticker}: {ex}")
+
         # Filtrar pelo período
         f_map = {}
         for q in quotes:
@@ -351,7 +365,8 @@ def simulate_portfolio(
             "passive_return_pct_usd": round(passive_return_pct_usd, 2),
             "alpha_rebalance_usd": round(smart_val_usd - passive_val_usd, 2),
             "single_vals_usd": {c: round(single_vals_usd[c], 2) for c in weights},
-            "single_return_pcts_usd": {c: round(single_return_pcts_usd[c], 2) for c in weights}
+            "single_return_pcts_usd": {c: round(single_return_pcts_usd[c], 2) for c in weights},
+            "smart_shares": {c: quotas_smart[c] for c in weights}
         })
 
     # Resumo final
@@ -375,6 +390,7 @@ def simulate_portfolio(
     assets_performance = compute_asset_performance_metrics(funds, quotes, dates, timeline, contributions_log, last_known_usd_rate)
     monthly_inflows = compute_monthly_inflows_by_asset(contributions_log, funds)
     treemap_distribution = compute_treemap_distribution(funds, final_entry, last_known_usd_rate)
+    dividends_analytics = compute_dividends_analytics(funds, quotes, dates, timeline, total_invested)
 
     return {
         "start_date": dates[0],
@@ -409,12 +425,13 @@ def simulate_portfolio(
         "timeline": timeline,
         "benchmarks": benchmarks_result,
         "contributions_log": contributions_log,
-        # 7 Novos Recursos Analíticos
+        # Recursos Analíticos
         "monthly_summary": monthly_summary,
         "correlation_matrix": correlation_matrix,
         "assets_performance": assets_performance,
         "monthly_inflows": monthly_inflows,
-        "treemap_distribution": treemap_distribution
+        "treemap_distribution": treemap_distribution,
+        "dividends": dividends_analytics
     }
 
 MONTH_NAMES_PT = {
@@ -946,3 +963,321 @@ def simulate_all_benchmarks(
         }
 
     return results
+
+def compute_dividends_analytics(
+    funds: List[Dict[str, Any]],
+    quotes: Dict[str, Dict[str, float]],
+    dates: List[str],
+    timeline: List[Dict[str, Any]],
+    total_invested: float
+) -> Dict[str, Any]:
+    """
+    Calcula as análises completas de dividendos e proventos:
+    1. Montante em reais mês a mês (total da carteira e separado por fundo)
+    2. Comparação de Rentabilidade: Cota vs Cota + Dividendos (Total Return)
+    3. Grade Anual (Ano x Mês + Total + Yield)
+    4. Lista Cronológica de pagamentos com cotas na data e valor total creditado
+    5. KPIs consolidados
+    """
+    if not dates or not timeline:
+        return {
+            "has_dividends": False,
+            "total_dividends_brl": 0.0,
+            "monthly_avg_brl": 0.0,
+            "dividend_yield_pct": 0.0,
+            "kpis": {
+                "total_received": 0.0,
+                "monthly_avg": 0.0,
+                "dividend_yield_pct": 0.0,
+                "best_month": {"label": "—", "amount": 0.0},
+                "top_payer": {"name": "—", "ticker": "—", "amount": 0.0, "pct": 0.0},
+                "payments_count": 0,
+                "has_dividends": False
+            },
+            "monthly_dividends": [],
+            "annual_grid": {"all": {}},
+            "chronological_list": [],
+            "total_return_series": {"portfolio": {"dates": [], "price_return_pct": [], "total_return_pct": [], "spread_pct": 0.0}, "assets": {}}
+        }
+
+    start_date = dates[0]
+    end_date = dates[-1]
+
+    # Carregar proventos de cada ativo
+    asset_divs_raw = {}
+    for f in funds:
+        k = get_asset_key(f)
+        divs = load_asset_dividends(f)
+        filtered = [d for d in divs if start_date <= d["date"] <= end_date]
+        filtered.sort(key=lambda d: d["date"])
+        asset_divs_raw[k] = filtered
+
+    # Mapa de datas úteis para rápida busca
+    trading_dates_set = set(dates)
+    timeline_by_date = {entry["date"]: entry for entry in timeline}
+
+    def align_to_trading_date(dt: str) -> Optional[str]:
+        if dt in trading_dates_set:
+            return dt
+        prev_dates = [d for d in dates if d <= dt]
+        if prev_dates:
+            return prev_dates[-1]
+        next_dates = [d for d in dates if d >= dt]
+        return next_dates[0] if next_dates else None
+
+    # Agrupar proventos por dia útil alinhado
+    divs_by_trading_date = {d: [] for d in dates}
+    for f in funds:
+        k = get_asset_key(f)
+        for d in asset_divs_raw.get(k, []):
+            td = align_to_trading_date(d["date"])
+            if td and td in divs_by_trading_date:
+                divs_by_trading_date[td].append({
+                    "raw_date": d["date"],
+                    "trading_date": td,
+                    "asset_key": k,
+                    "fund": f,
+                    "amount": float(d["amount"]),
+                    "type": d.get("type", "Dividendo")
+                })
+
+    chronological_list = []
+    cum_div_portfolio_map = {}
+    cum_div_by_asset = {get_asset_key(f): 0.0 for f in funds}
+    cum_portfolio_total = 0.0
+
+    all_months = sorted(list({d[:7] for d in dates}))
+    monthly_map = {
+        ym: {
+            "ym": ym,
+            "label": format_month_pt(ym),
+            "total": 0.0,
+            "by_asset": {get_asset_key(f): 0.0 for f in funds}
+        }
+        for ym in all_months
+    }
+
+    cum_div_per_share_by_asset = {get_asset_key(f): {} for f in funds}
+    cum_div_per_share_acc = {get_asset_key(f): 0.0 for f in funds}
+
+    for dt in dates:
+        entry = timeline_by_date.get(dt, {})
+        shares_map = entry.get("smart_shares", {})
+        ym = dt[:7]
+
+        day_events = divs_by_trading_date.get(dt, [])
+        for evt in day_events:
+            k = evt["asset_key"]
+            f = evt["fund"]
+            amt_per_share = evt["amount"]
+            cum_div_per_share_acc[k] += amt_per_share
+
+            shares_held = float(shares_map.get(k, 0.0))
+            if shares_held > 0:
+                total_credit = round(shares_held * amt_per_share, 2)
+                cum_portfolio_total += total_credit
+                cum_div_by_asset[k] += total_credit
+                if ym in monthly_map:
+                    monthly_map[ym]["total"] += total_credit
+                    monthly_map[ym]["by_asset"][k] += total_credit
+
+                ticker = clean_ticker(f.get("code") or f.get("id") or "")
+                name = f.get("name", ticker or k)
+                color = f.get("color", "#2E7D5B")
+
+                fund_quotes = quotes.get(k, {})
+                price_on_date = fund_quotes.get(dt, 0.0)
+                div_yield_pct = round((amt_per_share / price_on_date) * 100.0, 2) if price_on_date > 0 else 0.0
+
+                chronological_list.append({
+                    "date": evt["raw_date"],
+                    "trading_date": dt,
+                    "asset_key": k,
+                    "ticker": ticker,
+                    "name": name,
+                    "color": color,
+                    "type": evt["type"],
+                    "amount_per_share": round(amt_per_share, 4),
+                    "price_on_date": round(price_on_date, 2),
+                    "yield_pct": div_yield_pct,
+                    "shares": round(shares_held, 4),
+                    "total_amount": total_credit
+                })
+
+        cum_div_portfolio_map[dt] = cum_portfolio_total
+        for f in funds:
+            k = get_asset_key(f)
+            cum_div_per_share_by_asset[k][dt] = cum_div_per_share_acc[k]
+
+    # Ordenar lista cronológica da data mais recente para a mais antiga (extrato)
+    chronological_list.sort(key=lambda x: (x["date"], x["ticker"]), reverse=True)
+
+    # 1. Montante Mensal em Reais
+    monthly_dividends = [
+        {
+            "ym": ym,
+            "label": monthly_map[ym]["label"],
+            "total": round(monthly_map[ym]["total"], 2),
+            "by_asset": {k: round(v, 2) for k, v in monthly_map[ym]["by_asset"].items()}
+        }
+        for ym in all_months
+    ]
+
+    # 2. Séries de Rentabilidade (Cota vs Cota + Dividendos / Total Return)
+    port_price_ret = []
+    port_total_ret = []
+    for entry in timeline:
+        dt = entry["date"]
+        inv = entry["total_invested"]
+        s_val = entry["smart_val"]
+        price_pct = entry["smart_return_pct"]
+        port_price_ret.append(price_pct)
+
+        tr_val = s_val + cum_div_portfolio_map.get(dt, 0.0)
+        tr_pct = round(((tr_val - inv) / inv) * 100.0, 2) if inv > 0 else 0.0
+        port_total_ret.append(tr_pct)
+
+    spread_portfolio = round(port_total_ret[-1] - port_price_ret[-1], 2) if port_total_ret and port_price_ret else 0.0
+
+    assets_tr_series = {}
+    for f in funds:
+        k = get_asset_key(f)
+        fund_quotes = quotes.get(k, {})
+        q0 = fund_quotes.get(dates[0], 1.0)
+        a_price_ret = []
+        a_tr_ret = []
+        for dt in dates:
+            qt = fund_quotes.get(dt, q0)
+            p_ret = round(((qt - q0) / q0) * 100.0, 2) if q0 > 0 else 0.0
+            div_acc = cum_div_per_share_by_asset[k].get(dt, 0.0)
+            tr_ret = round(((qt + div_acc - q0) / q0) * 100.0, 2) if q0 > 0 else 0.0
+            a_price_ret.append(p_ret)
+            a_tr_ret.append(tr_ret)
+
+        a_spread = round(a_tr_ret[-1] - a_price_ret[-1], 2) if a_tr_ret and a_price_ret else 0.0
+        assets_tr_series[k] = {
+            "name": f.get("name", k),
+            "ticker": clean_ticker(f.get("code") or f.get("id") or ""),
+            "color": f.get("color", "#2E7D5B"),
+            "dates": dates,
+            "price_return_pct": a_price_ret,
+            "total_return_pct": a_tr_ret,
+            "spread_pct": a_spread,
+            "total_dividends": round(cum_div_by_asset[k], 2)
+        }
+
+    total_return_series = {
+        "portfolio": {
+            "dates": dates,
+            "price_return_pct": port_price_ret,
+            "total_return_pct": port_total_ret,
+            "spread_pct": spread_portfolio
+        },
+        "assets": assets_tr_series
+    }
+
+    # 3. Grade Anual (Matriz Ano x Mês + Total + Yield)
+    years = sorted(list({ym[:4] for ym in all_months}))
+    annual_grid = {}
+
+    def build_grid_for_scope(get_month_val_fn, get_month_equity_fn=None):
+        grid = {}
+        for y in years:
+            row = {"year": y}
+            year_sum = 0.0
+            for m_idx in range(1, 13):
+                m_str = f"{m_idx:02d}"
+                ym_key = f"{y}-{m_str}"
+                val = get_month_val_fn(ym_key)
+                row[m_str] = round(val, 2)
+                row[f"{m_str}_val"] = round(val, 2)
+
+                m_yield = 0.0
+                if val > 0:
+                    eq_m = 0.0
+                    if get_month_equity_fn:
+                        eq_m = get_month_equity_fn(ym_key)
+                    if eq_m <= 0:
+                        dates_in_m = [d for d in dates if d.startswith(ym_key)]
+                        if dates_in_m:
+                            eq_m = timeline_by_date.get(dates_in_m[-1], {}).get("smart_val", total_invested)
+                    m_yield = round((val / max(1.0, eq_m)) * 100.0, 2) if eq_m > 0 else 0.0
+                row[f"{m_str}_yield"] = m_yield
+                year_sum += val
+
+            row["total"] = round(year_sum, 2)
+            
+            dates_in_year = [d for d in dates if d.startswith(y)]
+            inv_at_end = total_invested
+            if dates_in_year:
+                inv_at_end = timeline_by_date.get(dates_in_year[-1], {}).get("total_invested", total_invested)
+            row["yield_pct"] = round((year_sum / max(1.0, inv_at_end)) * 100.0, 2) if inv_at_end > 0 else 0.0
+            grid[y] = row
+        return grid
+
+    annual_grid["all"] = build_grid_for_scope(lambda ym: monthly_map.get(ym, {}).get("total", 0.0))
+    for f in funds:
+        k = get_asset_key(f)
+        annual_grid[k] = build_grid_for_scope(lambda ym: monthly_map.get(ym, {}).get("by_asset", {}).get(k, 0.0))
+
+    # 4. KPIs
+    tot_received = round(cum_portfolio_total, 2)
+    m_count = max(1, len(all_months))
+    m_avg = round(tot_received / m_count, 2)
+    tot_yield = round((tot_received / max(1.0, total_invested)) * 100.0, 2) if total_invested > 0 else 0.0
+
+    # Dividend Yield dos últimos 12 meses (LTM)
+    last_12_months = all_months[-12:] if len(all_months) >= 12 else all_months
+    divs_12m_brl = sum(monthly_map[ym]["total"] for ym in last_12_months)
+    final_equity = timeline[-1]["smart_val"] if timeline else total_invested
+    dy_12m_base = final_equity if final_equity > 0 else total_invested
+    dividend_yield_12m_pct = round((divs_12m_brl / max(1.0, dy_12m_base)) * 100.0, 2) if dy_12m_base > 0 else 0.0
+
+    # Média mensal em percentual do dividend yield (% a.m.)
+    monthly_yields = []
+    for ym in all_months:
+        m_tot = monthly_map[ym]["total"]
+        dates_in_m = [d for d in dates if d.startswith(ym)]
+        if dates_in_m:
+            val_in_m = timeline_by_date.get(dates_in_m[-1], {}).get("smart_val", total_invested)
+            if val_in_m > 0:
+                monthly_yields.append((m_tot / val_in_m) * 100.0)
+    monthly_avg_yield_pct = round(sum(monthly_yields) / len(monthly_yields), 2) if monthly_yields else round(dividend_yield_12m_pct / 12.0, 2)
+
+    best_m = max(monthly_dividends, key=lambda m: m["total"], default={"label": "—", "total": 0.0})
+
+    top_p = {"name": "—", "ticker": "—", "amount": 0.0, "pct": 0.0}
+    if tot_received > 0:
+        best_k = max(cum_div_by_asset.keys(), key=lambda k: cum_div_by_asset[k], default=None)
+        if best_k and cum_div_by_asset[best_k] > 0:
+            matching_f = next((f for f in funds if get_asset_key(f) == best_k), {})
+            top_p = {
+                "name": matching_f.get("name", best_k),
+                "ticker": clean_ticker(matching_f.get("code") or matching_f.get("id") or best_k),
+                "amount": round(cum_div_by_asset[best_k], 2),
+                "pct": round((cum_div_by_asset[best_k] / tot_received) * 100.0, 1)
+            }
+
+    return {
+        "has_dividends": tot_received > 0,
+        "total_dividends_brl": tot_received,
+        "monthly_avg_brl": m_avg,
+        "dividend_yield_pct": tot_yield,
+        "dividend_yield_12m_pct": dividend_yield_12m_pct,
+        "monthly_avg_yield_pct": monthly_avg_yield_pct,
+        "kpis": {
+            "total_received": tot_received,
+            "monthly_avg": m_avg,
+            "monthly_avg_yield_pct": monthly_avg_yield_pct,
+            "dividend_yield_pct": tot_yield,
+            "dividend_yield_12m_pct": dividend_yield_12m_pct,
+            "best_month": {"label": best_m.get("label", "—"), "amount": best_m.get("total", 0.0)},
+            "top_payer": top_p,
+            "payments_count": len(chronological_list),
+            "has_dividends": tot_received > 0
+        },
+        "monthly_dividends": monthly_dividends,
+        "annual_grid": annual_grid,
+        "chronological_list": chronological_list,
+        "total_return_series": total_return_series
+    }

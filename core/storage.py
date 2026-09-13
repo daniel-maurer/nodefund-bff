@@ -20,8 +20,10 @@ if STORAGE_BACKEND == 'dynamodb':
     def load_fund_data(cnpj): return dynamo_adapter.load_fund_data(cnpj)
     def save_fund_data(cnpj, fund_name, new_quotes): return dynamo_adapter.save_fund_data(cnpj, fund_name, new_quotes)
     def load_b3_data(ticker): return dynamo_adapter.load_b3_data(ticker)
-    def save_b3_data(ticker, name, new_quotes): return dynamo_adapter.save_b3_data(ticker, name, new_quotes)
+    def load_b3_dividends(ticker): return dynamo_adapter.load_b3_dividends(ticker)
+    def save_b3_data(ticker, name, new_quotes, dividends=None): return dynamo_adapter.save_b3_data(ticker, name, new_quotes, dividends)
     def load_asset_data(asset): return dynamo_adapter.load_asset_data(asset)
+    def load_asset_dividends(asset): return dynamo_adapter.load_asset_dividends(asset)
     def load_benchmark_data(name): return dynamo_adapter.load_benchmark_data(name)
     def save_benchmark_data(name, display_name, series_type, new_points): return dynamo_adapter.save_benchmark_data(name, display_name, series_type, new_points)
     
@@ -47,8 +49,10 @@ else:
         load_fund_data,
         save_fund_data,
         load_b3_data,
+        load_b3_dividends,
         save_b3_data,
         load_asset_data,
+        load_asset_dividends,
         load_benchmark_data,
         save_benchmark_data,
         load_manifest,

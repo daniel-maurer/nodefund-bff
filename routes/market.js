@@ -9,7 +9,8 @@ const MarketRepository = require('../storage/marketRepository');
 
 async function handleQuotes(req, res, next) {
   try {
-    const quotes = await MarketRepository.getMarketQuotes();
+    const refresh = req.query.refresh === 'true' || req.query.refresh === '1';
+    const quotes = await MarketRepository.getMarketQuotes(refresh);
     res.json({ quotes });
   } catch (err) {
     next(err);
