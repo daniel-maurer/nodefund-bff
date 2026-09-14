@@ -105,6 +105,20 @@ test('SimulationRequest Model - validação de limites e datas', () => {
   });
   assert.strictEqual(sim.validate().isValid, true);
 
+  const simToday = new SimulationRequest({
+    start_date: '2024-01-01',
+    end_date: 'today'
+  });
+  assert.strictEqual(simToday.validate().isValid, true);
+  assert.strictEqual(simToday.end_date, new Date().toISOString().slice(0, 10));
+
+  const simAtual = new SimulationRequest({
+    start_date: '2024-01-01',
+    end_date: 'atual'
+  });
+  assert.strictEqual(simAtual.validate().isValid, true);
+  assert.strictEqual(simAtual.end_date, new Date().toISOString().slice(0, 10));
+
   const invalidSim = new SimulationRequest({
     initial_capital: -50,
     start_date: '2026-01-01',

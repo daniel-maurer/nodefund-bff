@@ -124,6 +124,10 @@ def simulate_portfolio(
     if not funds:
         return {"error": "Nenhum fundo ou ativo cadastrado na carteira."}
 
+    # Suporte flexível a "today", "atual", "hoje", "latest" ou vazio para simulação até a data atual
+    if not end_date or str(end_date).strip().lower() in ("today", "atual", "hoje", "latest"):
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
     # Normalizar pesos alvos
     total_pct = sum(float(f.get("target_pct", 0.0)) for f in funds)
     if total_pct <= 0:

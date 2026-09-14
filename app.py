@@ -280,7 +280,11 @@ class PrevRequestHandler(SimpleHTTPRequestHandler):
             initial_capital = float(payload.get("initial_capital", 20000.0))
             monthly_contribution = float(payload.get("monthly_contribution", 2000.0))
             start_date = payload.get("start_date", "2024-05-01")
-            end_date = payload.get("end_date", "2026-08-31")
+            raw_end = str(payload.get("end_date", "")).strip().lower()
+            if not raw_end or raw_end in ("today", "atual", "hoje", "latest"):
+                end_date = datetime.now().strftime("%Y-%m-%d")
+            else:
+                end_date = payload.get("end_date")
             rebalance_mode = payload.get("rebalance_mode", "smart_inflow")
 
             try:
